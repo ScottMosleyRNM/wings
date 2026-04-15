@@ -9,11 +9,16 @@ export interface SideOrder {
   quantity: number;
 }
 
+export interface DipOrder {
+  dipId: string;
+  size: "2oz" | "5.5oz";
+}
+
 export interface ParticipantOrder {
   name: string;
   wings: WingOrder[];
   sides: SideOrder[];
-  dips: string[]; // array of dip IDs
+  dips: DipOrder[];
   submittedAt: string;
 }
 
@@ -24,5 +29,4 @@ export interface OrderSession {
   orders: Record<string, ParticipantOrder>;
 }
 
-// Legacy compat
 export type WingSelection = WingOrder;
