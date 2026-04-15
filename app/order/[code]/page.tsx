@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { FLAVORS, HEAT_LABELS, HEAT_COLORS, HEAT_BG, WING_QUICK_PICKS, SIDES, SIDE_QTY, DIPS, DIP_QTY } from "@/lib/menu";
+import { FLAVORS, HEAT_LABELS, HEAT_COLORS, HEAT_BG, WING_QUICK_PICKS, SIDES, SIDE_QTY, DIPS, DIP_SIZES } from "@/lib/menu";
 import type { OrderSession, WingOrder, SideOrder, DipOrder } from "@/lib/types";
 import { normalizeKey } from "@/lib/utils";
 
@@ -60,10 +60,10 @@ export default function OrderPage({ params }: { params: Promise<{ code: string }
   }
 
   function toggleDip(dipId: string) {
-    setDips(p => p.find(d => d.dipId === dipId) ? p.filter(d => d.dipId !== dipId) : [...p, { dipId, quantity: 1 }]);
+    setDips(p => p.find(d => d.dipId === dipId) ? p.filter(d => d.dipId !== dipId) : [...p, { dipId, size: "2oz" }]);
   }
-  function setDipQty(dipId: string, quantity: number) {
-    setDips(p => p.map(d => d.dipId === dipId ? { ...d, quantity } : d));
+  function setDipSize(dipId: string, size: "2oz" | "5.5oz") {
+    setDips(p => p.map(d => d.dipId === dipId ? { ...d, size } : d));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -98,7 +98,6 @@ export default function OrderPage({ params }: { params: Promise<{ code: string }
       <p style={muted}>Loading…</p>
     </main>
   );
-
   if (notFound || !session) return (
     <main className="min-h-screen flex flex-col items-center justify-center px-4" style={{ background: "var(--background)" }}>
       <div className="text-5xl mb-4">🤔</div>
@@ -106,7 +105,6 @@ export default function OrderPage({ params }: { params: Promise<{ code: string }
       <Link href="/" style={{ color: "var(--green)" }}>← Back to home</Link>
     </main>
   );
-
   if (submitted) return (
     <main className="min-h-screen flex flex-col items-center justify-center px-4" style={{ background: "var(--background)" }}>
       <div className="text-6xl mb-4">🍗</div>
@@ -115,7 +113,7 @@ export default function OrderPage({ params }: { params: Promise<{ code: string }
         {totalWings} wings{sides.length ? ` · ${sides.length} side${sides.length > 1 ? "s" : ""}` : ""}{dips.length ? ` · ${dips.length} dip${dips.length > 1 ? "s" : ""}` : ""} for <strong>{participantName}</strong>
       </p>
       <p className="text-sm mb-8" style={muted}>
-        Use code <span className="font-mono font-bold" style={{ color: "var(--green)" }}>{code}</span> to edit your order.
+        Use code <span className="font-mono font-bold" style={{ color: "var(--green)" }}>{code}</span> to edit.
       </p>
       <button onClick={reset} className="text-sm rounded-lg px-5 py-2.5 font-semibold"
         style={{ background: "var(--muted)", color: "var(--foreground)", border: "1px solid var(--border)" }}>
@@ -123,7 +121,6 @@ export default function OrderPage({ params }: { params: Promise<{ code: string }
       </button>
     </main>
   );
-
   if (!nameSubmitted) return (
     <main className="min-h-screen flex flex-col items-center justify-center px-4" style={{ background: "var(--background)" }}>
       <div className="w-full max-w-sm mb-6"><Link href="/" style={muted}>← Back</Link></div>
@@ -177,8 +174,6 @@ export default function OrderPage({ params }: { params: Promise<{ code: string }
                           className="text-xs px-2 py-0.5 rounded" style={{ background: "var(--muted)", ...muted }}>Remove</button>
                       )}
                     </div>
-
-                    {/* Flavor */}
                     <div>
                       <label className="block text-xs font-medium mb-1" style={muted}>Flavor</label>
                       <select value={row.flavorId} onChange={e => updateWing(i, "flavorId", e.target.value)}
@@ -189,8 +184,6 @@ export default function OrderPage({ params }: { params: Promise<{ code: string }
                       </select>
                       {flavor && <p className="text-xs mt-1" style={{ color: HEAT_COLORS[flavor.heat] }}>{flavor.description}</p>}
                     </div>
-
-                    {/* Style */}
                     <div>
                       <label className="block text-xs font-medium mb-1.5" style={muted}>Style</label>
                       <div className="flex gap-2">
@@ -203,11 +196,8 @@ export default function OrderPage({ params }: { params: Promise<{ code: string }
                         ))}
                       </div>
                     </div>
-
-                    {/* Quantity */}
                     <div>
                       <label className="block text-xs font-medium mb-1.5" style={muted}>Quantity</label>
-                      {/* Quick picks */}
                       <div className="flex flex-wrap gap-1.5 mb-2">
                         {WING_QUICK_PICKS.map(n => (
                           <button key={n} type="button" onClick={() => updateWing(i, "quantity", n)}
@@ -217,18 +207,14 @@ export default function OrderPage({ params }: { params: Promise<{ code: string }
                           </button>
                         ))}
                       </div>
-                      {/* Stepper */}
                       <div className="flex items-center gap-2">
                         <button type="button" onClick={() => updateWing(i, "quantity", Math.max(1, row.quantity - 1))}
                           className="w-10 h-10 rounded-lg text-lg font-bold flex items-center justify-center"
                           style={{ background: "var(--muted)", color: "var(--foreground)", border: "1px solid var(--border)" }}>−</button>
-                        <input
-                          type="number" min={1} max={500}
-                          value={row.quantity}
+                        <input type="number" min={1} max={500} value={row.quantity}
                           onChange={e => setWingQty(i, e.target.value)}
                           className="flex-1 rounded-lg px-3 py-2 text-center text-lg font-black font-mono focus:outline-none"
-                          style={{ background: "var(--muted)", color: "var(--yellow)", border: "1px solid var(--border)" }}
-                        />
+                          style={{ background: "var(--muted)", color: "var(--yellow)", border: "1px solid var(--border)" }} />
                         <button type="button" onClick={() => updateWing(i, "quantity", Math.min(500, row.quantity + 1))}
                           className="w-10 h-10 rounded-lg text-lg font-bold flex items-center justify-center"
                           style={{ background: "var(--muted)", color: "var(--foreground)", border: "1px solid var(--border)" }}>+</button>
@@ -255,8 +241,7 @@ export default function OrderPage({ params }: { params: Promise<{ code: string }
               {SIDES.map(side => {
                 const sel = sides.find(s => s.sideId === side.id);
                 return (
-                  <div key={side.id} onClick={() => toggleSide(side.id)}
-                    className="rounded-xl p-3 cursor-pointer"
+                  <div key={side.id} onClick={() => toggleSide(side.id)} className="rounded-xl p-3 cursor-pointer"
                     style={{ background: sel ? "#0d2200" : "var(--card)", border: `1px solid ${sel ? "var(--green)" : "var(--border)"}` }}>
                     <div className="text-2xl mb-1">{side.emoji}</div>
                     <div className="text-xs font-semibold">{side.name}</div>
@@ -289,18 +274,17 @@ export default function OrderPage({ params }: { params: Promise<{ code: string }
               {DIPS.map(dip => {
                 const sel = dips.find(d => d.dipId === dip.id);
                 return (
-                  <div key={dip.id} onClick={() => toggleDip(dip.id)}
-                    className="rounded-xl p-3 cursor-pointer"
+                  <div key={dip.id} onClick={() => toggleDip(dip.id)} className="rounded-xl p-3 cursor-pointer"
                     style={{ background: sel ? "#1a1a00" : "var(--card)", border: `1px solid ${sel ? "var(--yellow)" : "var(--border)"}` }}>
                     <div className="text-2xl mb-1">{dip.emoji}</div>
                     <div className="text-xs font-semibold">{dip.name}</div>
                     {sel && (
                       <div className="mt-2 flex gap-1" onClick={e => e.stopPropagation()}>
-                        {DIP_QTY.map(n => (
-                          <button key={n} type="button" onClick={() => setDipQty(dip.id, n)}
+                        {DIP_SIZES.map(sz => (
+                          <button key={sz} type="button" onClick={() => setDipSize(dip.id, sz)}
                             className="flex-1 rounded py-1 text-xs font-bold"
-                            style={{ background: sel.quantity === n ? "var(--yellow)" : "var(--muted)", color: sel.quantity === n ? "#000" : "var(--foreground)" }}>
-                            {n}
+                            style={{ background: sel.size === sz ? "var(--yellow)" : "var(--muted)", color: sel.size === sz ? "#000" : "var(--foreground)" }}>
+                            {sz}
                           </button>
                         ))}
                       </div>
