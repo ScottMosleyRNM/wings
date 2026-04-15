@@ -24,9 +24,9 @@ export const FLAVORS: Flavor[] = [
   { id: "atomic",             name: "Atomic",                 heat: 3, description: "Wingstop's hottest — not for the faint of heart" },
 ];
 
-export const HEAT_LABELS = ["No Heat", "Mild", "Medium", "Hot"] as const;
-export const HEAT_COLORS = ["#8b949e", "#E9C423", "#F97316", "#EF4444"] as const;
-export const HEAT_BG     = ["#1c2128", "#2a2200", "#2a1400", "#2a0a0a"] as const;
+export const HEAT_LABELS    = ["No Heat", "Mild", "Medium", "Hot"] as const;
+export const HEAT_COLORS    = ["#8b949e", "#E9C423", "#F97316", "#EF4444"] as const;
+export const HEAT_BG        = ["#1c2128", "#2a2200", "#2a1400", "#2a0a0a"] as const;
 export const WING_QUICK_PICKS = [5, 10, 15, 20, 25, 30, 50];
 
 // ── Sides ─────────────────────────────────────────────────────────────────────
@@ -67,4 +67,5 @@ export const DIPS: Dip[] = [
   { id: "garlic-parmesan", name: "Garlic Parmesan",  emoji: "🧄" },
 ];
 
-export const DIP_QTY = [1, 2, 3];
+export const DIP_SIZES = ["2oz", "5.5oz"] as const;
+export type DipSize = typeof DIP_SIZES[number];
