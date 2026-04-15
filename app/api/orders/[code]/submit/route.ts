@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession, saveSession } from "@/lib/kv";
 import { normalizeKey } from "@/lib/utils";
-import type { WingOrder, SideOrder } from "@/lib/types";
+import type { WingOrder, SideOrder, DipOrder } from "@/lib/types";
 
 export async function POST(
   req: Request,
@@ -17,17 +17,19 @@ export async function POST(
       name: string;
       wings: WingOrder[];
       sides: SideOrder[];
-      dips: string[];
+      dips: DipOrder[];
     };
 
-    if (!name?.trim()) return NextResponse.json({ error: "Name is required" }, { status: 400 });
-    if (!Array.isArray(wings) || wings.length === 0) return NextResponse.json({ error: "At least one wing order is required" }, { status: 400 });
+    if (!name?.trim())
+      return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    if (!Array.isArray(wings) || wings.length === 0)
+      return NextResponse.json({ error: "At least one wing order is required" }, { status: 400 });
 
     for (const w of wings) {
       if (!w.flavorId || !["classic", "boneless"].includes(w.style))
         return NextResponse.json({ error: "Invalid wing selection" }, { status: 400 });
-      if (typeof w.quantity !== "number" || w.quantity < 1 || w.quantity > 200)
-        return NextResponse.json({ error: "Wing quantity must be between 1 and 200" }, { status: 400 });
+      if (typeof w.quantity !== "number" || w.quantity < 1 || w.quantity > 500)
+        return NextResponse.json({ error: "Wing quantity must be between 1 and 500" }, { status: 400 });
     }
 
     const key = normalizeKey(name.trim());
