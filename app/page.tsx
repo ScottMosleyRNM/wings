@@ -44,8 +44,8 @@ export default function HomePage() {
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             maxLength={10}
-            className="w-full rounded-lg px-4 py-3 text-lg font-black font-mono tracking-[0.3em] uppercase text-center focus:outline-none focus:ring-2"
-            style={{ background: "var(--muted)", color: "var(--foreground)", border: "1px solid var(--border)", ringColor: "var(--green)" }}
+            className="w-full rounded-lg px-4 py-3 text-lg font-black font-mono tracking-[0.3em] uppercase text-center focus:outline-none focus:ring-2 focus:ring-green-500"
+            style={{ background: "var(--muted)", color: "var(--foreground)", border: "1px solid var(--border)" }}
           />
           {error && <p className="text-sm text-red-400">{error}</p>}
           <button
