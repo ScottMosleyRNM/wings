@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { FLAVORS, SIDES, DIPS } from "@/lib/menu";
-import type { OrderSession, WingOrder, SideOrder } from "@/lib/types";
+import type { OrderSession, WingOrder, SideOrder, DipOrder } from "@/lib/types";
 
 export default function AdminPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
@@ -38,7 +38,6 @@ export default function AdminPage({ params }: { params: Promise<{ code: string }
       <p style={muted}>Loading…</p>
     </main>
   );
-
   if (notFound || !session) return (
     <main className="min-h-screen flex flex-col items-center justify-center px-4" style={{ background: "var(--background)" }}>
       <h1 className="text-xl font-bold mb-2">Order not found</h1>
@@ -48,44 +47,33 @@ export default function AdminPage({ params }: { params: Promise<{ code: string }
 
   const orders = Object.values(session.orders);
 
-  // Tally wings
+  // Wing tally
   const wingMap: Record<string, { name: string; classic: number; boneless: number }> = {};
-  for (const o of orders) {
+  for (const o of orders)
     for (const w of (o.wings ?? []) as WingOrder[]) {
-      if (!wingMap[w.flavorId]) {
-        wingMap[w.flavorId] = { name: FLAVORS.find(f => f.id === w.flavorId)?.name ?? w.flavorId, classic: 0, boneless: 0 };
-      }
+      if (!wingMap[w.flavorId]) wingMap[w.flavorId] = { name: FLAVORS.find(f => f.id === w.flavorId)?.name ?? w.flavorId, classic: 0, boneless: 0 };
       wingMap[w.flavorId][w.style] += w.quantity;
     }
-  }
   const wingTally = Object.entries(wingMap).map(([id, v]) => ({ id, ...v, total: v.classic + v.boneless })).sort((a, b) => b.total - a.total);
   const totalWings = wingTally.reduce((s, t) => s + t.total, 0);
 
-  // Tally sides
+  // Side tally
   const sideMap: Record<string, { name: string; emoji: string; total: number }> = {};
-  for (const o of orders) {
+  for (const o of orders)
     for (const s of (o.sides ?? []) as SideOrder[]) {
-      if (!sideMap[s.sideId]) {
-        const found = SIDES.find(x => x.id === s.sideId);
-        sideMap[s.sideId] = { name: found?.name ?? s.sideId, emoji: found?.emoji ?? "🍟", total: 0 };
-      }
+      if (!sideMap[s.sideId]) { const x = SIDES.find(x => x.id === s.sideId); sideMap[s.sideId] = { name: x?.name ?? s.sideId, emoji: x?.emoji ?? "🍟", total: 0 }; }
       sideMap[s.sideId].total += s.quantity;
     }
-  }
   const sideTally = Object.values(sideMap).sort((a, b) => b.total - a.total);
 
-  // Tally dips
-  const dipMap: Record<string, { name: string; emoji: string; count: number }> = {};
-  for (const o of orders) {
-    for (const dipId of (o.dips ?? []) as string[]) {
-      if (!dipMap[dipId]) {
-        const found = DIPS.find(d => d.id === dipId);
-        dipMap[dipId] = { name: found?.name ?? dipId, emoji: found?.emoji ?? "🥣", count: 0 };
-      }
-      dipMap[dipId].count += 1;
+  // Dip tally (now DipOrder with quantity)
+  const dipMap: Record<string, { name: string; emoji: string; total: number }> = {};
+  for (const o of orders)
+    for (const d of (o.dips ?? []) as DipOrder[]) {
+      if (!dipMap[d.dipId]) { const x = DIPS.find(x => x.id === d.dipId); dipMap[d.dipId] = { name: x?.name ?? d.dipId, emoji: x?.emoji ?? "🥣", total: 0 }; }
+      dipMap[d.dipId].total += d.quantity;
     }
-  }
-  const dipTally = Object.values(dipMap).sort((a, b) => b.count - a.count);
+  const dipTally = Object.values(dipMap).sort((a, b) => b.total - a.total);
 
   return (
     <main className="min-h-screen px-4 py-8" style={{ background: "var(--background)" }}>
@@ -111,7 +99,8 @@ export default function AdminPage({ params }: { params: Promise<{ code: string }
             <p className="text-xs font-medium mb-0.5" style={muted}>Share join code</p>
             <p className="text-3xl font-black font-mono tracking-widest" style={{ color: "var(--green)" }}>{code}</p>
           </div>
-          <button onClick={copyLink} className="text-sm rounded-lg px-4 py-2 font-bold shrink-0" style={{ background: "var(--green)", color: "#000" }}>
+          <button onClick={copyLink} className="text-sm rounded-lg px-4 py-2 font-bold shrink-0"
+            style={{ background: "var(--green)", color: "#000" }}>
             {copied ? "Copied!" : "Copy link"}
           </button>
         </div>
@@ -127,10 +116,10 @@ export default function AdminPage({ params }: { params: Promise<{ code: string }
             {/* Stats */}
             <div className="grid grid-cols-4 gap-3 mb-6">
               {[
-                { label: "People",   value: orders.length,        emoji: "👥" },
-                { label: "Wings",    value: totalWings,           emoji: "🍗" },
-                { label: "Sides",    value: sideTally.reduce((s,t)=>s+t.total,0), emoji: "🍟" },
-                { label: "Dip orders", value: dipTally.reduce((s,t)=>s+t.count,0), emoji: "🥣" },
+                { label: "People",  value: orders.length,                            emoji: "👥" },
+                { label: "Wings",   value: totalWings,                               emoji: "🍗" },
+                { label: "Sides",   value: sideTally.reduce((s,t)=>s+t.total,0),    emoji: "🍟" },
+                { label: "Dips",    value: dipTally.reduce((s,t)=>s+t.total,0),     emoji: "🥣" },
               ].map(({ label, value, emoji }) => (
                 <div key={label} className="rounded-2xl p-3 text-center" style={card}>
                   <div className="text-xl mb-0.5">{emoji}</div>
@@ -140,16 +129,17 @@ export default function AdminPage({ params }: { params: Promise<{ code: string }
               ))}
             </div>
 
-            {/* Wings breakdown */}
+            {/* Wings */}
             {wingTally.length > 0 && (
               <div className="mb-6">
-                <h2 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2" style={muted}><span>🍗</span> Wings</h2>
+                <h2 className="text-sm font-bold uppercase tracking-wider mb-3" style={muted}>🍗 Wings</h2>
                 <div className="rounded-2xl overflow-hidden" style={card}>
                   <div className="grid grid-cols-4 px-4 py-2 text-xs font-semibold uppercase tracking-wider" style={{ borderBottom: "1px solid var(--border)", ...muted }}>
                     <span className="col-span-2">Flavor</span><span className="text-center">Classic</span><span className="text-center">Boneless</span>
                   </div>
                   {wingTally.map((t, i) => (
-                    <div key={t.id} className="grid grid-cols-4 px-4 py-3 text-sm items-center" style={{ borderBottom: i < wingTally.length - 1 ? "1px solid var(--border)" : "none" }}>
+                    <div key={t.id} className="grid grid-cols-4 px-4 py-3 text-sm"
+                      style={{ borderBottom: i < wingTally.length - 1 ? "1px solid var(--border)" : "none" }}>
                       <div className="col-span-2"><span className="font-medium">{t.name}</span><span className="ml-2 text-xs font-bold" style={{ color: "var(--green)" }}>{t.total}</span></div>
                       <span className="text-center">{t.classic || "—"}</span>
                       <span className="text-center">{t.boneless || "—"}</span>
@@ -157,20 +147,21 @@ export default function AdminPage({ params }: { params: Promise<{ code: string }
                   ))}
                   <div className="grid grid-cols-4 px-4 py-3 text-sm font-bold" style={{ borderTop: "2px solid var(--border)", background: "var(--muted)" }}>
                     <span className="col-span-2">Total <span style={{ color: "var(--green)" }}>{totalWings}</span></span>
-                    <span className="text-center">{wingTally.reduce((s,t)=>s+t.classic,0)||""}</span>
-                    <span className="text-center">{wingTally.reduce((s,t)=>s+t.boneless,0)||""}</span>
+                    <span className="text-center">{wingTally.reduce((s,t)=>s+t.classic,0) || ""}</span>
+                    <span className="text-center">{wingTally.reduce((s,t)=>s+t.boneless,0) || ""}</span>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Sides breakdown */}
+            {/* Sides */}
             {sideTally.length > 0 && (
               <div className="mb-6">
-                <h2 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2" style={muted}><span>🍟</span> Sides</h2>
+                <h2 className="text-sm font-bold uppercase tracking-wider mb-3" style={muted}>🍟 Sides</h2>
                 <div className="rounded-2xl overflow-hidden" style={card}>
                   {sideTally.map((s, i) => (
-                    <div key={s.name} className="flex items-center justify-between px-4 py-3 text-sm" style={{ borderBottom: i < sideTally.length - 1 ? "1px solid var(--border)" : "none" }}>
+                    <div key={s.name} className="flex items-center justify-between px-4 py-3 text-sm"
+                      style={{ borderBottom: i < sideTally.length - 1 ? "1px solid var(--border)" : "none" }}>
                       <span>{s.emoji} {s.name}</span>
                       <span className="font-bold" style={{ color: "var(--yellow)" }}>{s.total}</span>
                     </div>
@@ -179,14 +170,15 @@ export default function AdminPage({ params }: { params: Promise<{ code: string }
               </div>
             )}
 
-            {/* Dips breakdown */}
+            {/* Dips */}
             {dipTally.length > 0 && (
               <div className="mb-6">
-                <h2 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2" style={muted}><span>🥣</span> Dipping Sauces</h2>
+                <h2 className="text-sm font-bold uppercase tracking-wider mb-3" style={muted}>🥣 Dipping Sauces</h2>
                 <div className="flex flex-wrap gap-2">
                   {dipTally.map(d => (
-                    <div key={d.name} className="rounded-full px-4 py-2 text-sm font-semibold flex items-center gap-1.5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-                      {d.emoji} {d.name} <span className="font-black ml-1" style={{ color: "var(--yellow)" }}>×{d.count}</span>
+                    <div key={d.name} className="rounded-full px-4 py-2 text-sm font-semibold flex items-center gap-1.5"
+                      style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                      {d.emoji} {d.name} <span className="font-black ml-1" style={{ color: "var(--yellow)" }}>×{d.total}</span>
                     </div>
                   ))}
                 </div>
@@ -225,9 +217,9 @@ export default function AdminPage({ params }: { params: Promise<{ code: string }
                       )}
                       {(order.dips ?? []).length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {(order.dips as string[]).map((dipId, i) => {
-                            const dip = DIPS.find(d => d.id === dipId);
-                            return <span key={i} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>{dip?.emoji} {dip?.name ?? dipId}</span>;
+                          {(order.dips as DipOrder[]).map((d, i) => {
+                            const dip = DIPS.find(x => x.id === d.dipId);
+                            return <span key={i} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>{dip?.emoji} {dip?.name ?? d.dipId} ×{d.quantity}</span>;
                           })}
                         </div>
                       )}
