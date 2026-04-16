@@ -69,3 +69,4 @@ export const DIPS: Dip[] = [
 
 export const DIP_SIZES = ["2oz", "5.5oz"] as const;
 export type DipSize = typeof DIP_SIZES[number];
+export const DIP_QTY = [1, 2, 3];

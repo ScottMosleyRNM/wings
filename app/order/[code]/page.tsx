@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { FLAVORS, HEAT_LABELS, HEAT_COLORS, HEAT_BG, WING_QUICK_PICKS, SIDES, SIDE_QTY, DIPS, DIP_SIZES } from "@/lib/menu";
+import { FLAVORS, HEAT_LABELS, HEAT_COLORS, HEAT_BG, WING_QUICK_PICKS, SIDES, SIDE_QTY, DIPS, DIP_SIZES, DIP_QTY } from "@/lib/menu";
 import type { OrderSession, WingOrder, SideOrder, DipOrder } from "@/lib/types";
 import { normalizeKey } from "@/lib/utils";
 
@@ -60,10 +60,13 @@ export default function OrderPage({ params }: { params: Promise<{ code: string }
   }
 
   function toggleDip(dipId: string) {
-    setDips(p => p.find(d => d.dipId === dipId) ? p.filter(d => d.dipId !== dipId) : [...p, { dipId, size: "2oz" }]);
+    setDips(p => p.find(d => d.dipId === dipId) ? p.filter(d => d.dipId !== dipId) : [...p, { dipId, size: "2oz", quantity: 1 }]);
   }
   function setDipSize(dipId: string, size: "2oz" | "5.5oz") {
     setDips(p => p.map(d => d.dipId === dipId ? { ...d, size } : d));
+  }
+  function setDipQty(dipId: string, quantity: number) {
+    setDips(p => p.map(d => d.dipId === dipId ? { ...d, quantity } : d));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -279,14 +282,25 @@ export default function OrderPage({ params }: { params: Promise<{ code: string }
                     <div className="text-2xl mb-1">{dip.emoji}</div>
                     <div className="text-xs font-semibold">{dip.name}</div>
                     {sel && (
-                      <div className="mt-2 flex gap-1" onClick={e => e.stopPropagation()}>
-                        {DIP_SIZES.map(sz => (
-                          <button key={sz} type="button" onClick={() => setDipSize(dip.id, sz)}
-                            className="flex-1 rounded py-1 text-xs font-bold"
-                            style={{ background: sel.size === sz ? "var(--yellow)" : "var(--muted)", color: sel.size === sz ? "#000" : "var(--foreground)" }}>
-                            {sz}
-                          </button>
-                        ))}
+                      <div className="mt-2 flex flex-col gap-1" onClick={e => e.stopPropagation()}>
+                        <div className="flex gap-1">
+                          {DIP_SIZES.map(sz => (
+                            <button key={sz} type="button" onClick={() => setDipSize(dip.id, sz)}
+                              className="flex-1 rounded py-1 text-xs font-bold"
+                              style={{ background: sel.size === sz ? "var(--yellow)" : "var(--muted)", color: sel.size === sz ? "#000" : "var(--foreground)" }}>
+                              {sz}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex gap-1">
+                          {DIP_QTY.map(n => (
+                            <button key={n} type="button" onClick={() => setDipQty(dip.id, n)}
+                              className="flex-1 rounded py-1 text-xs font-bold"
+                              style={{ background: sel.quantity === n ? "var(--yellow)" : "var(--muted)", color: sel.quantity === n ? "#000" : "var(--foreground)" }}>
+                              {n}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
