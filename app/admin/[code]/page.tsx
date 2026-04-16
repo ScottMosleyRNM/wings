@@ -72,7 +72,7 @@ export default function AdminPage({ params }: { params: Promise<{ code: string }
     for (const d of (o.dips ?? []) as DipOrder[]) {
       const key = `${d.dipId}__${d.size}`;
       if (!dipMap[key]) { const x = DIPS.find(x => x.id === d.dipId); dipMap[key] = { name: x?.name ?? d.dipId, emoji: x?.emoji ?? "🥣", size: d.size, count: 0 }; }
-      dipMap[key].count += 1;
+      dipMap[key].count += d.quantity ?? 1;
     }
   const dipTally = Object.values(dipMap).sort((a, b) => b.count - a.count);
 
@@ -214,7 +214,7 @@ export default function AdminPage({ params }: { params: Promise<{ code: string }
                         <div className="flex flex-wrap gap-1 mt-1">
                           {(order.dips as DipOrder[]).map((d, i) => {
                             const dip = DIPS.find(x => x.id === d.dipId);
-                            return <span key={i} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>{dip?.emoji} {dip?.name ?? d.dipId} ({d.size})</span>;
+                            return <span key={i} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>{dip?.emoji} {dip?.name ?? d.dipId} ({d.size}) ×{d.quantity ?? 1}</span>;
                           })}
                         </div>
                       )}

@@ -12,6 +12,7 @@ export interface SideOrder {
 export interface DipOrder {
   dipId: string;
   size: "2oz" | "5.5oz";
+  quantity: number;
 }
 
 export interface ParticipantOrder {
