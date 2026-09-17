@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession, saveSession } from "@/lib/kv";
 import { normalizeKey } from "@/lib/utils";
+import { FLAVORS, SIDES, DIPS } from "@/lib/menu";
 import type { WingOrder, SideOrder, DipOrder } from "@/lib/types";
 
 export async function POST(
@@ -26,18 +27,36 @@ export async function POST(
       return NextResponse.json({ error: "At least one wing order is required" }, { status: 400 });
 
     for (const w of wings) {
-      if (!w.flavorId || !["classic", "boneless"].includes(w.style))
+      if (!FLAVORS.some(f => f.id === w.flavorId) || !["classic", "boneless"].includes(w.style))
         return NextResponse.json({ error: "Invalid wing selection" }, { status: 400 });
       if (typeof w.quantity !== "number" || w.quantity < 1 || w.quantity > 500)
         return NextResponse.json({ error: "Wing quantity must be between 1 and 500" }, { status: 400 });
+    }
+
+    const cleanSides = (Array.isArray(sides) ? sides : []).filter(s => SIDES.some(x => x.id === s.sideId));
+
+    const cleanDips: DipOrder[] = [];
+    for (const d of Array.isArray(dips) ? dips : []) {
+      const dip = DIPS.find(x => x.id === d.dipId);
+      if (!dip) continue;
+      if (dip.sizes.length > 0 && !dip.sizes.includes(d.size))
+        return NextResponse.json({ error: `Invalid size for ${dip.name}` }, { status: 400 });
+      if (dip.pickFlavor && !FLAVORS.some(f => f.id === d.flavorId))
+        return NextResponse.json({ error: `Pick a flavor for ${dip.name}` }, { status: 400 });
+      cleanDips.push({
+        dipId: dip.id,
+        size: dip.sizes.length > 0 ? d.size : "",
+        quantity: d.quantity ?? 1,
+        ...(dip.pickFlavor ? { flavorId: d.flavorId } : {}),
+      });
     }
 
     const key = normalizeKey(name.trim());
     session.orders[key] = {
       name: name.trim(),
       wings,
-      sides: Array.isArray(sides) ? sides : [],
-      dips: Array.isArray(dips) ? dips : [],
+      sides: cleanSides,
+      dips: cleanDips,
       submittedAt: new Date().toISOString(),
     };
     await saveSession(session);

@@ -66,12 +66,21 @@ export default function AdminPage({ params }: { params: Promise<{ code: string }
     }
   const sideTally = Object.values(sideMap).sort((a, b) => b.total - a.total);
 
-  // Dip tally — group by dip+size
+  // Dip tally — group by dip+size, and by flavor for Side of Flavor
   const dipMap: Record<string, { name: string; emoji: string; size: string; count: number }> = {};
   for (const o of orders)
     for (const d of (o.dips ?? []) as DipOrder[]) {
-      const key = `${d.dipId}__${d.size}`;
-      if (!dipMap[key]) { const x = DIPS.find(x => x.id === d.dipId); dipMap[key] = { name: x?.name ?? d.dipId, emoji: x?.emoji ?? "🥣", size: d.size, count: 0 }; }
+      const key = `${d.dipId}__${d.size}__${d.flavorId ?? ""}`;
+      if (!dipMap[key]) {
+        const x = DIPS.find(x => x.id === d.dipId);
+        const flavor = d.flavorId ? FLAVORS.find(f => f.id === d.flavorId)?.name ?? d.flavorId : "";
+        dipMap[key] = {
+          name: (x?.name ?? d.dipId) + (flavor ? ` — ${flavor}` : ""),
+          emoji: x?.emoji ?? "🥣",
+          size: d.size,
+          count: 0,
+        };
+      }
       dipMap[key].count += d.quantity ?? 1;
     }
   const dipTally = Object.values(dipMap).sort((a, b) => b.count - a.count);
@@ -173,7 +182,7 @@ export default function AdminPage({ params }: { params: Promise<{ code: string }
                     <div key={i} className="rounded-full px-4 py-2 text-sm font-semibold flex items-center gap-1.5"
                       style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
                       {d.emoji} {d.name}
-                      <span className="text-xs px-1.5 py-0.5 rounded font-mono" style={{ background: "var(--muted)", color: "var(--yellow)" }}>{d.size}</span>
+                      {d.size && <span className="text-xs px-1.5 py-0.5 rounded font-mono" style={{ background: "var(--muted)", color: "var(--yellow)" }}>{d.size}</span>}
                       <span className="font-black" style={{ color: "var(--yellow)" }}>×{d.count}</span>
                     </div>
                   ))}
@@ -214,7 +223,8 @@ export default function AdminPage({ params }: { params: Promise<{ code: string }
                         <div className="flex flex-wrap gap-1 mt-1">
                           {(order.dips as DipOrder[]).map((d, i) => {
                             const dip = DIPS.find(x => x.id === d.dipId);
-                            return <span key={i} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>{dip?.emoji} {dip?.name ?? d.dipId} ({d.size}) ×{d.quantity ?? 1}</span>;
+                            const flavor = d.flavorId ? FLAVORS.find(f => f.id === d.flavorId)?.name ?? d.flavorId : "";
+                            return <span key={i} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>{dip?.emoji} {dip?.name ?? d.dipId}{flavor ? ` — ${flavor}` : ""}{d.size ? ` (${d.size})` : ""} ×{d.quantity ?? 1}</span>;
                           })}
                         </div>
                       )}

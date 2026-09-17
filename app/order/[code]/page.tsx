@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { FLAVORS, HEAT_LABELS, HEAT_COLORS, HEAT_BG, WING_QUICK_PICKS, SIDES, SIDE_QTY, DIPS, DIP_SIZES, DIP_QTY } from "@/lib/menu";
+import { FLAVORS, HEAT_LABELS, HEAT_COLORS, HEAT_BG, WING_QUICK_PICKS, SIDES, SIDE_QTY, DIPS, DIP_QTY, normalizeDipSize } from "@/lib/menu";
 import type { OrderSession, WingOrder, SideOrder, DipOrder } from "@/lib/types";
 import { normalizeKey } from "@/lib/utils";
 
@@ -35,9 +35,21 @@ export default function OrderPage({ params }: { params: Promise<{ code: string }
     const existing = session.orders[normalizeKey(participantName.trim())];
     if (existing) {
       setIsEditing(true);
-      if (existing.wings?.length) setWings(existing.wings.map((w: WingOrder) => ({ ...w })));
-      if (existing.sides?.length) setSides(existing.sides.map((s: SideOrder) => ({ ...s })));
-      if (existing.dips?.length) setDips(existing.dips.map((d: DipOrder) => ({ ...d })));
+      // Menu items that have since been removed are cleared so the user re-picks
+      // rather than silently resubmitting something Wingstop doesn't sell.
+      if (existing.wings?.length) setWings(existing.wings.map((w: WingOrder) => ({
+        ...w,
+        flavorId: FLAVORS.some(f => f.id === w.flavorId) ? w.flavorId : "",
+      })));
+      if (existing.sides?.length) setSides(
+        existing.sides.filter((s: SideOrder) => SIDES.some(x => x.id === s.sideId)).map((s: SideOrder) => ({ ...s })),
+      );
+      if (existing.dips?.length) setDips(
+        existing.dips
+          // Drop dips that are no longer on the menu (e.g. the old BBQ / Garlic Parmesan entries).
+          .filter((d: DipOrder) => DIPS.some(x => x.id === d.dipId))
+          .map((d: DipOrder) => ({ ...d, size: normalizeDipSize(DIPS.find(x => x.id === d.dipId), d.size) })),
+      );
     }
     setNameSubmitted(true);
   }
@@ -60,19 +72,27 @@ export default function OrderPage({ params }: { params: Promise<{ code: string }
   }
 
   function toggleDip(dipId: string) {
-    setDips(p => p.find(d => d.dipId === dipId) ? p.filter(d => d.dipId !== dipId) : [...p, { dipId, size: "2oz", quantity: 1 }]);
+    setDips(p => p.find(d => d.dipId === dipId)
+      ? p.filter(d => d.dipId !== dipId)
+      : [...p, { dipId, size: DIPS.find(x => x.id === dipId)?.sizes[0] ?? "", quantity: 1 }]);
   }
-  function setDipSize(dipId: string, size: "2oz" | "5.5oz") {
+  function setDipSize(dipId: string, size: string) {
     setDips(p => p.map(d => d.dipId === dipId ? { ...d, size } : d));
+  }
+  function setDipFlavor(dipId: string, flavorId: string) {
+    setDips(p => p.map(d => d.dipId === dipId ? { ...d, flavorId } : d));
   }
   function setDipQty(dipId: string, quantity: number) {
     setDips(p => p.map(d => d.dipId === dipId ? { ...d, quantity } : d));
   }
 
+  const missingDipFlavor = dips.some(d => DIPS.find(x => x.id === d.dipId)?.pickFlavor && !d.flavorId);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitError("");
     if (wings.some(w => !w.flavorId)) { setSubmitError("Please select a flavor for each wing row."); return; }
+    if (missingDipFlavor) { setSubmitError("Please pick a flavor for your Side of Flavor."); return; }
     setSubmitting(true);
     try {
       const res = await fetch(`/api/orders/${code}/submit`, {
@@ -283,15 +303,25 @@ export default function OrderPage({ params }: { params: Promise<{ code: string }
                     <div className="text-xs font-semibold">{dip.name}</div>
                     {sel && (
                       <div className="mt-2 flex flex-col gap-1" onClick={e => e.stopPropagation()}>
-                        <div className="flex gap-1">
-                          {DIP_SIZES.map(sz => (
-                            <button key={sz} type="button" onClick={() => setDipSize(dip.id, sz)}
-                              className="flex-1 rounded py-1 text-xs font-bold"
-                              style={{ background: sel.size === sz ? "var(--yellow)" : "var(--muted)", color: sel.size === sz ? "#000" : "var(--foreground)" }}>
-                              {sz}
-                            </button>
-                          ))}
-                        </div>
+                        {dip.sizes.length > 0 && (
+                          <div className="flex gap-1">
+                            {dip.sizes.map(sz => (
+                              <button key={sz} type="button" onClick={() => setDipSize(dip.id, sz)}
+                                className="flex-1 rounded py-1 text-xs font-bold"
+                                style={{ background: sel.size === sz ? "var(--yellow)" : "var(--muted)", color: sel.size === sz ? "#000" : "var(--foreground)" }}>
+                                {sz}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {dip.pickFlavor && (
+                          <select value={sel.flavorId ?? ""} onChange={e => setDipFlavor(dip.id, e.target.value)}
+                            className="w-full rounded px-2 py-1 text-xs focus:outline-none"
+                            style={{ background: "var(--muted)", color: "var(--foreground)", border: "1px solid var(--border)" }}>
+                            <option value="">Which flavor?</option>
+                            {FLAVORS.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                          </select>
+                        )}
                         <div className="flex gap-1">
                           {DIP_QTY.map(n => (
                             <button key={n} type="button" onClick={() => setDipQty(dip.id, n)}
@@ -319,7 +349,7 @@ export default function OrderPage({ params }: { params: Promise<{ code: string }
 
           {submitError && <p className="text-sm text-red-400">{submitError}</p>}
 
-          <button type="submit" disabled={submitting || wings.some(w => !w.flavorId)}
+          <button type="submit" disabled={submitting || wings.some(w => !w.flavorId) || missingDipFlavor}
             className="w-full rounded-lg py-3.5 text-sm font-bold disabled:opacity-40 cursor-pointer"
             style={{ background: "var(--green)", color: "#000" }}>
             {submitting ? "Submitting…" : isEditing ? "🔄 Update Order" : "🍗 Submit Order"}
