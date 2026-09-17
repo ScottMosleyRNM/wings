@@ -11,8 +11,11 @@ export interface SideOrder {
 
 export interface DipOrder {
   dipId: string;
-  size: "2oz" | "5.5oz";
+  /** A size from the dip's own list ("Regular" | "Large" | "Medium"), or "" when it has none. */
+  size: string;
   quantity: number;
+  /** Side of Flavor only: which wing flavor to serve on the side. */
+  flavorId?: string;
 }
 
 export interface ParticipantOrder {
